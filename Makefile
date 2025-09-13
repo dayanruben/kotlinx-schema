@@ -1,7 +1,7 @@
 
 .PHONY: build
 build:
-	./gradlew build
+	./gradlew  build koverLog koverXmlReport
 
 .PHONY: test
 test:

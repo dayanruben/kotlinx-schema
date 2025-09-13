@@ -16,6 +16,8 @@ rootProject.name = "kotlinx-schema"
 include(
     ":kotlinx-schema-annotations",
     ":kotlinx-schema-generator-json",
-    ":kotlinx-schema-compiler-plugin",
-    ":integration-tests",
+    ":kotlinx-schema-ksp",
+    ":ksp-integration-tests",
+    // ":kotlinx-schema-compiler-plugin",
+    // ":integration-tests",
 )

@@ -1,3 +1,7 @@
+@file:OptIn(ExperimentalWasmDsl::class)
+
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
 }
@@ -10,6 +14,20 @@ kotlin {
         }
     }
 
+    js(IR) {
+        browser()
+        nodejs()
+    }
+    wasmJs {
+        binaries.library()
+        browser {}
+        nodejs()
+    }
+
+    macosArm64()
+    iosArm64()
+    iosSimulatorArm64()
+
     withSourcesJar(publish = true)
 
     sourceSets {
@@ -18,6 +36,11 @@ kotlin {
             dependencies {
                 implementation(libs.kotlin.test)
                 implementation(libs.kotest.assertions.core)
+            }
+        }
+
+        jvmTest {
+            dependencies {
                 implementation(kotlin("reflect"))
             }
         }

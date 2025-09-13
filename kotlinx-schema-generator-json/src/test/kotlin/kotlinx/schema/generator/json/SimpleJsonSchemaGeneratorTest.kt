@@ -1,6 +1,5 @@
 package kotlinx.schema.generator.json
 
-import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import kotlinx.schema.Description
 import kotlinx.serialization.Serializable
@@ -21,15 +20,14 @@ class SimpleJsonSchemaGeneratorTest {
             // language=json
             """
           {
-          "title": "Person",                        
-          "description": "Personal information",                     
-          "required": [ "firstName" ],
+         "required": [ "firstName" ],
           "type": "object",
           "properties": {
             "firstName": {
               "type": "string"
             }
-          }
+          },
+          "additionalProperties": false
         }
         """,
         )
