@@ -1,6 +1,6 @@
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
     `dokka-convention`
+    `kotlin-jvm-convention`
 }
 
 dokka {
@@ -9,25 +9,13 @@ dokka {
 }
 
 kotlin {
-    jvm {
-        compilerOptions {
-            optIn.set(listOf("kotlinx.serialization.ExperimentalSerializationApi"))
-        }
-    }
-    sourceSets {
-        jvmMain {
-            dependencies {
-                implementation(project(":kotlinx-schema-generator-json"))
-                implementation(libs.ksp.api)
-            }
-        }
 
-        jvmTest {
-            dependencies {
-                implementation(libs.kotlin.test)
-                implementation(libs.kotest.assertions.core)
-                implementation(kotlin("reflect"))
-            }
-        }
+    dependencies {
+        implementation(project(":kotlinx-schema-generator-json"))
+        implementation(libs.ksp.api)
+        // tests
+        testImplementation(libs.kotlin.test)
+        testImplementation(libs.kotest.assertions.core)
+        testImplementation(kotlin("reflect"))
     }
 }

@@ -1,7 +1,10 @@
 
 .PHONY: build
-build:
-	./gradlew  build koverLog koverXmlReport --rerun-tasks
+build:clean
+	./gradlew --rerun-tasks \
+		build \
+		koverLog koverXmlReport \
+		:kotlinx-schema-gradle-plugin:publishToMavenLocal
 
 .PHONY: test
 test:

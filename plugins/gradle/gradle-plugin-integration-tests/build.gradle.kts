@@ -3,7 +3,7 @@
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
+    kotlin("multiplatform")
     id("kotlinx.schema")
 }
 
@@ -29,6 +29,7 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(libs.kotlinx.serialization.json)
+                implementation(project(":kotlinx-schema-annotations"))
             }
         }
 
