@@ -481,6 +481,37 @@ generation.
 **Note**: You can mix both annotation types in the same project. If both `@Description` and `@LLMDescription` are
 present on the same element, `@Description` takes precedence.
 
+## JSON Schema DSL
+
+For manual schema construction, use the [**kotlinx-schema-json**](kotlinx-schema-json) module. 
+It provides type-safe Kotlin models and a DSL for building JSON Schema definitions programmatically, 
+with full kotlinx-serialization support.
+
+```kotlin
+dependencies {
+    implementation("org.jetbrains.kotlinx:kotlinx-schema-json:<version>")
+}
+```
+
+Example:
+
+```kotlin
+val schema = jsonSchema {
+    name = "User"
+    schema {
+        required("id", "email")
+        property("id") { string { format = "uuid" } }
+        property("email") { string { format = "email" } }
+        property("age") { integer { minimum = 0.0 } }
+    }
+}
+
+// Serialize to JSON
+val jsonString = Json.encodeToString(JsonSchema.serializer(), schema)
+```
+
+See [kotlinx-schema-json/README.md](kotlinx-schema-json/README.md) for full documentation and examples.
+
 ## Project architecture
 
 ```mermaid
@@ -518,6 +549,7 @@ C4Context
 Top-level modules you might interact with:
 
 - **kotlinx-schema-annotations** — runtime annotations: @Schema and @Description
+- **kotlinx-schema-json** — type-safe models and DSL for building JSON Schema definitions programmatically
 - **kotlinx-schema-generator-core** — internal representation (IR) for schema descriptions, introspection utils, generator interfaces
 - **kotlinx-schema-generator-json** — JSON Schema emitter from the IR
 - **kotlinx-schema-ksp** — KSP processor that scans your code and generates the extension properties:
@@ -537,10 +569,14 @@ Top-level modules you might interact with:
 ```mermaid
 sequenceDiagram
     participant C as Client
+    participant S as SchemaGeneratorService
     participant G as SchemaGenerator
     participant I as SchemaIntrospector
     participant E as SchemaEmitter
     
+    C->>S: getGenerator(target, R::class)
+    S-->>G: find
+    S-->>C: SchemaGenerator
     C->>G: generate(target) : R?
 
     G->>I: introspect(target)
@@ -550,10 +586,12 @@ sequenceDiagram
     E-->>G: schema (R)
     G-->>C: schema (R)
 ```
-1. _Client_ (KSP Processor or Java class) calls _SchemaGenerator_ to generate a Schema string representation, 
+1. _Client_ (KSP Processor or Java class) calls _SchemaGeneratorService_ to lookup _SchemaGenerator_ 
+   by target type T and expected schema class. _SchemaGeneratorService_ returns _SchemaGenerator_, if any.
+2. _Client_ (KSP Processor or Java class) calls _SchemaGenerator_ to generate a Schema string representation, 
 and, optionally, object a Schema string representation.
-2. SchemaGenerator invokes SchemaIntrospector to convert an object into _TypeGraph_
-3. _Emitter_ converts a _TypeGraph_ to a target representation (e.g., JSON Schema) and returns to SchemaGenerator
+3. SchemaGenerator invokes SchemaIntrospector to convert an object into _TypeGraph_
+4. _Emitter_ converts a _TypeGraph_ to a target representation (e.g., JSON Schema) and returns to SchemaGenerator
 
 ## Building and testing
 
