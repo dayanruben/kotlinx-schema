@@ -1,5 +1,6 @@
 package kotlinx.schema.json
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
@@ -14,7 +15,7 @@ import kotlin.test.Test
  */
 @Suppress("LargeClass", "LongMethod")
 internal class JsonSchemaDslTest {
-    private val json = Json { prettyPrint = false }
+    private val json = Json { prettyPrint = true }
 
     @Test
     fun `simple string schema serialization round-trip`() {
@@ -23,8 +24,8 @@ internal class JsonSchemaDslTest {
                 name = "UserEmail"
                 strict = false
                 schema {
-                    required("email")
                     property("email") {
+                        required = true
                         string {
                             description = "Email address"
                             format = "email"
@@ -146,11 +147,9 @@ internal class JsonSchemaDslTest {
                     property("tags") {
                         array {
                             description = "List of tags"
-                            minItems = 1u
-                            maxItems = 10u
-                            items {
-                                string()
-                            }
+                            minItems = 1
+                            maxItems = 10
+                            ofString()
                         }
                     }
                 }
@@ -194,8 +193,8 @@ internal class JsonSchemaDslTest {
                     property("metadata") {
                         obj {
                             description = "User metadata"
-                            required("createdAt")
                             property("createdAt") {
+                                required = true
                                 string {
                                     format = "date-time"
                                 }
@@ -325,19 +324,19 @@ internal class JsonSchemaDslTest {
                     property("enabled") {
                         boolean {
                             description = "Feature enabled"
-                            defaultValue(true)
+                            default = true
                         }
                     }
                     property("name") {
                         string {
                             description = "Config name"
-                            defaultValue("default")
+                            default = "default"
                         }
                     }
                     property("count") {
                         integer {
                             description = "Item count"
-                            defaultValue(10)
+                            default = 10
                         }
                     }
                 }
@@ -421,9 +420,9 @@ internal class JsonSchemaDslTest {
                 description = "A complex schema with various field types"
                 schema {
                     additionalProperties = false
-                    required("id", "email")
 
                     property("id") {
+                        required = true
                         string {
                             format = "uuid"
                             description = "Unique identifier"
@@ -431,6 +430,7 @@ internal class JsonSchemaDslTest {
                     }
 
                     property("email") {
+                        required = true
                         string {
                             format = "email"
                             description = "Email address"
@@ -442,9 +442,7 @@ internal class JsonSchemaDslTest {
                     property("tags") {
                         array {
                             description = "List of tags"
-                            items {
-                                string()
-                            }
+                            ofString()
                         }
                     }
 
@@ -566,19 +564,18 @@ internal class JsonSchemaDslTest {
                     property("steps") {
                         array {
                             description = "Processing steps"
-                            items {
-                                obj {
-                                    required("explanation", "output")
-                                    additionalProperties = false
-                                    property("explanation") {
-                                        string {
-                                            description = "Step explanation"
-                                        }
+                            ofObject {
+                                additionalProperties = false
+                                property("explanation") {
+                                    required = true
+                                    string {
+                                        description = "Step explanation"
                                     }
-                                    property("output") {
-                                        string {
-                                            description = "Step output"
-                                        }
+                                }
+                                property("output") {
+                                    required = true
+                                    string {
+                                        description = "Step output"
                                     }
                                 }
                             }
@@ -637,13 +634,13 @@ internal class JsonSchemaDslTest {
                     property("version") {
                         string {
                             description = "API version"
-                            constValue("v1.0")
+                            constValue = "v1.0"
                         }
                     }
                     property("flag") {
                         boolean {
                             description = "Constant flag"
-                            constValue(false)
+                            constValue = false
                         }
                     }
                 }
@@ -687,7 +684,7 @@ internal class JsonSchemaDslTest {
                             description = "Precision value"
                             exclusiveMinimum = 0.0
                             exclusiveMaximum = 1.0
-                            constValue(0.5)
+                            constValue = 0.5
                         }
                     }
                 }

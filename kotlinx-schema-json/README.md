@@ -24,57 +24,203 @@ dependencies {
 
 ### Building schemas with DSL
 
+The DSL provides a type-safe way to build JSON Schema definitions.
+
+#### Basic Example
+
 ```kotlin
-import kotlinx.schema.json.*
-
-val userSchema = jsonSchema {
-    name = "User"
-    strict = true
-    description = "User profile schema"
-
+val schema = jsonSchema {
+    name = "UserEmail"
+    strict = false
     schema {
-        required("id", "email", "name")
-        additionalProperties = false
-
-        property("id") {
-            string {
-                format = "uuid"
-                description = "Unique user identifier"
-            }
-        }
-
         property("email") {
+            required = true
             string {
+                description = "Email address"
                 format = "email"
-                minLength = 5
-                maxLength = 100
-            }
-        }
-
-        property("name") {
-            string {
-                description = "User's full name"
-            }
-        }
-
-        property("age") {
-            integer {
-                minimum = 0.0
-                maximum = 150.0
-            }
-        }
-
-        property("tags") {
-            array {
-                description = "User tags"
-                items {
-                    string()
-                }
             }
         }
     }
 }
 ```
+
+Produces:
+```json
+{
+  "name": "UserEmail",
+  "strict": false,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "email": {
+        "type": "string",
+        "description": "Email address",
+        "format": "email"
+      }
+    },
+    "required": ["email"]
+  }
+}
+```
+
+#### Comprehensive Example
+
+This example demonstrates all available DSL features in a single schema:
+
+```kotlin
+val schema = jsonSchema {
+    name = "UserProfile"
+    strict = true
+    description = "Complete user profile schema"
+
+    schema {
+        // Schema metadata
+        id = "https://example.com/schemas/user-profile"
+        schema = "https://json-schema.org/draft-07/schema"
+        additionalProperties = false
+
+        // Required string with format constraint and description
+        property("id") {
+            required = true
+            string {
+                format = "uuid"
+                description = "Unique identifier"
+            }
+        }
+
+        // Required string with format and length constraints
+        property("email") {
+            required = true
+            string {
+                format = "email"
+                description = "Email address"
+                minLength = 5
+                maxLength = 100
+            }
+        }
+
+        // Integer with numeric constraints
+        property("age") {
+            integer {
+                description = "Person's age"
+                minimum = 0.0
+                maximum = 150.0
+            }
+        }
+
+        // Number with multipleOf constraint
+        property("score") {
+            number {
+                description = "User score"
+                minimum = 0.0
+                maximum = 100.0
+                multipleOf = 0.5
+            }
+        }
+
+        // String enum
+        property("status") {
+            string {
+                description = "Current status"
+                enum = listOf("active", "inactive", "pending")
+            }
+        }
+
+        // Boolean with a default value
+        property("verified") {
+            boolean {
+                description = "Email verification status"
+                default = false
+            }
+        }
+
+        // Nullable property
+        property("nickname") {
+            string {
+                description = "Optional nickname"
+                nullable = true
+            }
+        }
+
+        // Constant value
+        property("apiVersion") {
+            string {
+                description = "API version"
+                constValue = "v1.0"
+            }
+        }
+
+        // Array of strings with size constraints
+        property("tags") {
+            array {
+                description = "User tags"
+                minItems = 1
+                maxItems = 10
+                ofString()
+            }
+        }
+
+        // Nested object with required fields
+        property("metadata") {
+            obj {
+                description = "User metadata"
+                property("createdAt") {
+                    required = true
+                    string {
+                        format = "date-time"
+                    }
+                }
+                property("updatedAt") {
+                    string {
+                        format = "date-time"
+                    }
+                }
+            }
+        }
+
+        // Array of objects
+        property("activities") {
+            array {
+                description = "User activity log"
+                ofObject {
+                    additionalProperties = false
+                    property("action") {
+                        required = true
+                        string {
+                            description = "Action performed"
+                        }
+                    }
+                    property("timestamp") {
+                        required = true
+                        string {
+                            format = "date-time"
+                            description = "When action occurred"
+                        }
+                    }
+                }
+            }
+        }
+
+        // Schema reference
+        property("address") {
+            reference("#/definitions/Address")
+        }
+    }
+}
+```
+
+This comprehensive example includes:
+- **Required fields**: `id`, `email` (with `required = true`)
+- **String constraints**: `format`, `minLength`, `maxLength`, `enum`, `pattern`
+- **Numeric constraints**: `minimum`, `maximum`, `multipleOf`, `exclusiveMinimum`, `exclusiveMaximum`
+- **Default values**: Direct assignment `default = value` (automatically wrapped in `JsonPrimitive`)
+- **Nullable properties**: Using `nullable = true`
+- **Constant values**: Direct assignment `constValue = value` (automatically wrapped in `JsonPrimitive`)
+- **Arrays**: With `minItems`, `maxItems`, and typed `items`
+- **Nested objects**: Using `obj { }` with nested properties
+- **Array of objects**: Complex array items with their own schemas
+- **Schema references**: Using `reference()` for reusable schemas
+- **Schema metadata**: `$id`, `$schema`, `strict`, `description`, `additionalProperties`
 
 ### Serialization and deserialization
 
@@ -84,10 +230,10 @@ import kotlinx.serialization.json.Json
 val json = Json { prettyPrint = true }
 
 // Serialize to JSON string
-val jsonString = json.encodeToString(JsonSchema.serializer(), userSchema)
+val jsonString = json.encodeToString(userSchema)
 
 // Deserialize from JSON string
-val schema = json.decodeFromString(JsonSchema.serializer(), jsonString)
+val schema = json.decodeFromString(jsonString)
 ```
 
 ### Working with nested objects
@@ -100,75 +246,15 @@ val productSchema = jsonSchema {
         property("metadata") {
             obj {
                 description = "Product metadata"
-                required("createdAt")
 
                 property("createdAt") {
+                    required = true
                     string { format = "date-time" }
                 }
 
                 property("updatedAt") {
                     string { format = "date-time" }
                 }
-            }
-        }
-    }
-}
-```
-
-### Array of objects
-
-```kotlin
-val stepsSchema = jsonSchema {
-    name = "ProcessSteps"
-
-    schema {
-        property("steps") {
-            array {
-                items {
-                    obj {
-                        required("explanation", "output")
-
-                        property("explanation") {
-                            string { description = "Step explanation" }
-                        }
-
-                        property("output") {
-                            string { description = "Step output" }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-```
-
-### Default values and constraints
-
-```kotlin
-val configSchema = jsonSchema {
-    name = "Configuration"
-
-    schema {
-        property("enabled") {
-            boolean {
-                description = "Feature enabled"
-                defaultValue(true)
-            }
-        }
-
-        property("maxRetries") {
-            integer {
-                defaultValue(3)
-                minimum = 0.0
-                maximum = 10.0
-            }
-        }
-
-        property("status") {
-            string {
-                enum = listOf("active", "inactive", "pending")
-                defaultValue("active")
             }
         }
     }
@@ -189,15 +275,17 @@ val configSchema = jsonSchema {
 
 ### Constraints
 
-- `required(vararg fields)` - Mark fields as required
+- `required = true` - Mark a property as required (set within the property block)
 - `nullable = true` - Allow null values
-- `defaultValue(value)` - Set default value
-- `constValue(value)` - Set constant value
+- `default = value` - Set default value (automatically wrapped in `JsonPrimitive`, or use `JsonElement` directly)
+- `constValue = value` - Set constant value (automatically wrapped in `JsonPrimitive`, or use `JsonElement` directly)
 - `enum = listOf(...)` - Enumerate allowed values
 - `minimum`, `maximum` - Numeric bounds
 - `minLength`, `maxLength` - String length constraints
 - `minItems`, `maxItems` - Array size constraints
 - `additionalProperties` - Allow/disallow additional properties
+
+**Note**: The legacy `required(vararg fields: String)` function is still available for backward compatibility, but using `required = true` within property blocks is the recommended approach.
 
 ## DSL Safety
 
