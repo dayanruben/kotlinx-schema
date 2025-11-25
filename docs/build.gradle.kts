@@ -8,6 +8,7 @@ dependencies {
     dokka(project(":kotlinx-schema-annotations"))
     dokka(project(":kotlinx-schema-generator-core"))
     dokka(project(":kotlinx-schema-generator-json"))
+    dokka(project(":kotlinx-schema-json"))
     dokka(project(":kotlinx-schema-ksp"))
 }
 
