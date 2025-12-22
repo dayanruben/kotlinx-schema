@@ -6,6 +6,7 @@ on:
     branches: ["main"]
     paths-ignore:
       - "**/README.md"
+      - "examples/**"
   pull_request:
     branches: ["main"]
   workflow_dispatch:
@@ -40,6 +41,14 @@ jobs:
 
       - name: Build
         run: ./gradlew build check koverXmlReport --no-daemon
+
+      - name: Upload Reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: reports-${{ matrix.example }}
+          path: |
+            **/build/reports/
 
       - name: Publish Test Report
         uses: mikepenz/action-junit-report@v6

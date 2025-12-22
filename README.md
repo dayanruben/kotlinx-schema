@@ -4,11 +4,14 @@
 [![Maven Central](https://img.shields.io/maven-central/v/org.jetbrains.kotlinx/kotlinx-schema-ksp.svg?label=Maven%20Central)](https://central.sonatype.com/search?q=org.jetbrains.kotlinx%2Fkotlinx-schema-*)
 [![Build with Gradle](https://github.com/Kotlin/kotlinx-schema/actions/workflows/build.yml/badge.svg)](https://github.com/Kotlin/kotlinx-schema/actions/workflows/build.yml)
 [![CodeQL](https://github.com/Kotlin/kotlinx-schema/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/Kotlin/kotlinx-schema/actions/workflows/github-code-scanning/codeql)
+[![Docs](https://img.shields.io/badge/Docs-Live-blue?logo=kotlin)](https://kotlin.github.io/kotlinx-schema/)
+[![Examples](https://img.shields.io/badge/Examples-1-blue?logo=github)](examples)
 
 [![Kotlin](https://img.shields.io/badge/kotlin-2.2+-blueviolet.svg?logo=kotlin)](http://kotlinlang.org)
 [![Kotlin Multiplatform](https://img.shields.io/badge/Platforms-%20JVM%20%7C%20Wasm%2FJS%20%7C%20Native%20-blueviolet?logo=kotlin)](https://kotlinlang.org/docs/multiplatform.html)
 [![JVM](https://img.shields.io/badge/JVM-17+-red.svg?logo=jvm)](http://java.com)
 [![License](https://img.shields.io/badge/License-Apache_2.0-yellow.svg)](LICENSE)
+
 
 # kotlinx-schema
 
@@ -65,6 +68,8 @@ This library solves three key challenges:
 
 Recommended: use the Gradle plugin.
 It applies KSP for you, wires generated sources, and sets up task dependencies.
+
+Refer to the example projects [here](./examples).
 
 ### Annotate Your Models
 
