@@ -49,6 +49,9 @@
 - Type-safe Kotlin DSL for programmatic schema construction
 - Works everywhere: JVM, JS, iOS, macOS, Wasm
 
+> [!TIP]
+> **Need to build JSON Schemas manually?** The [**kotlinx-schema-json**](kotlinx-schema-json) module provides type-safe Kotlin models and DSL compliant with [JSON Schema Draft 2020-12](https://json-schema.org/draft/2020-12/schema), with support for polymorphism, discriminators, and type-safe enums. [See JSON Schema DSL section ↓](#json-schema-dsl)
+
 ## Why kotlinx-schema?
 
 This library solves three key challenges:
@@ -1179,8 +1182,8 @@ If multiple description annotations are present on the same element, the library
 ## JSON Schema DSL
 
 For manual schema construction, use the [**kotlinx-schema-json**](kotlinx-schema-json) module.
-It provides type-safe Kotlin models and a DSL for building JSON Schema definitions programmatically,
-with full kotlinx-serialization support.
+It provides type-safe Kotlin models compliant with the [JSON Schema Draft 2020-12](https://json-schema.org/draft/2020-12/schema) specification
+and a DSL for building JSON Schema definitions programmatically, with full kotlinx-serialization support.
 
 ```kotlin
 dependencies {
@@ -1202,6 +1205,12 @@ val schema = jsonSchema {
             required = true
             string { format = "email" }
         }
+        property("age") {
+            integer {
+                minimum = 0
+                maximum = 150
+            }
+        }
         // Polymorphic types with discriminators
         property("role") {
             oneOf {
@@ -1221,15 +1230,16 @@ val schema = jsonSchema {
 **Features:**
 - ✅ Type-safe property definitions (string, number, integer, boolean, array, object, reference)
 - ✅ **Polymorphism**: oneOf, anyOf, allOf with elegant discriminator support
+- ✅ **Type-safe enums**: Native Kotlin types (List<String>, List<Number>, etc.) instead of JsonElement
 - ✅ Constraints: required, nullable, enum, const, min/max, format validation
 - ✅ Nested schemas and arrays of complex types
 - ✅ Full kotlinx-serialization integration
 - ✅ Kotlin Multiplatform support
 
-**📖 See [kotlinx-schema-json/README.md](kotlinx-schema-json/README.md) for comprehensive documentation** including:
-- Complete DSL reference and API overview
-- Polymorphism patterns (oneOf, anyOf, allOf)
-- Discriminator usage with references and inline schemas
+**📖 For comprehensive documentation, see [kotlinx-schema-json/README.md](kotlinx-schema-json/README.md)** covering:
+- Complete DSL reference and type-safe enum API
+- Polymorphism patterns (oneOf, anyOf, allOf) with discriminators
+- Generic properties with heterogeneous enums
 - Working with nested objects and arrays
 - Serialization/deserialization examples
 - Function calling schema for LLM APIs
