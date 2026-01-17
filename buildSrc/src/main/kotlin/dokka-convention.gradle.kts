@@ -8,13 +8,11 @@ plugins {
 dokka {
     dokkaSourceSets.configureEach {
         includes.from("Module.md")
-
         sourceLink {
             // Read docs for more details: https://kotlinlang.org/docs/dokka-gradle.html#source-link-configuration
-            remoteUrl("https://github.com/Kotlin/kotlinx-schem/tree/master")
+            remoteUrl("https://github.com/Kotlin/kotlinx-schema/tree/master")
             localDirectory.set(rootDir)
         }
-
         externalDocumentationLinks.register("ktor-client") {
             url("https://api.ktor.io/ktor-client/")
             packageListUrl("https://api.ktor.io/package-list")
