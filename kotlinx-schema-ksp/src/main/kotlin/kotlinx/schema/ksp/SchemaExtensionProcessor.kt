@@ -29,10 +29,10 @@ internal class SchemaExtensionProcessor(
     private val logger: KSPLogger,
     private val options: Map<String, String>,
 ) : SymbolProcessor {
-    private companion object {
+    internal companion object {
         private const val KOTLINX_SCHEMA_ANNOTATION = "kotlinx.schema.Schema"
 
-        private const val PARAM_WITH_SCHEMA_OBJECT = "withSchemaObject"
+        const val PARAM_WITH_SCHEMA_OBJECT = "withSchemaObject"
 
         /**
          * A constant representing a configuration key used to specify whether schema generation should include
@@ -44,7 +44,7 @@ internal class SchemaExtensionProcessor(
          *
          * This value is typically expected to be provided as an option to the KSP processor and defaults to "false".
          */
-        private const val OPTION_WITH_SCHEMA_OBJECT = "kotlinx.schema.$PARAM_WITH_SCHEMA_OBJECT"
+        const val OPTION_WITH_SCHEMA_OBJECT = "kotlinx.schema.$PARAM_WITH_SCHEMA_OBJECT"
 
         /**
          * Key used to enable or disable the functionality of the schema generation plugin.
@@ -55,7 +55,7 @@ internal class SchemaExtensionProcessor(
          *
          * This parameter can be configured in the KSP processor's options.
          */
-        private const val OPTION_ENABLED = "kotlinx.schema.enabled"
+        const val OPTION_ENABLED = "kotlinx.schema.enabled"
 
         /**
          * Represents the key used to retrieve the root package name for schema generation
@@ -65,7 +65,16 @@ internal class SchemaExtensionProcessor(
          * Usage of this parameter is optional; if not provided, no package-based filtering is applied.
          * When specified, only classes within the defined root package or its subpackages will be processed.
          */
-        private const val OPTION_ROOT_PACKAGE = "kotlinx.schema.rootPackage"
+        const val OPTION_ROOT_PACKAGE = "kotlinx.schema.rootPackage"
+
+        /**
+         * Represents the key used to retrieve the visibility modifier for generated schema classes/functions
+         * from the compiler options passed to the plugin. This option allows users to specify
+         * the visibility level (e.g., public, internal, private, "") for the generated schema classes and functions.
+         *
+         * Usage of this parameter is optional; if not provided, the default visibility is used.
+         */
+        const val OPTION_VISIBILITY = "kotlinx.schema.visibility"
     }
 
     // Strategy instances for different declaration types

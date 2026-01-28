@@ -1,4 +1,4 @@
-import org.gradle.internal.impldep.org.jsoup.nodes.Document
+import dev.detekt.gradle.extensions.FailOnSeverity
 
 plugins {
     kotlin("plugin.serialization") version libs.versions.kotlin apply false
@@ -72,6 +72,7 @@ subprojects {
     detekt {
         config = files("$rootDir/detekt.yml")
         buildUponDefaultConfig = true
+        failOnSeverity.set(FailOnSeverity.Warning)
     }
 }
 
