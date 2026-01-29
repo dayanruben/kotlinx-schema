@@ -1,4 +1,4 @@
-name: Build and Publish API Docs to GitHub Pages
+name: Publish API Docs
 
 on:
   release:
@@ -6,6 +6,10 @@ on:
       - published
   # Allow running this workflow manually from the Actions tab
   workflow_dispatch:
+
+env:
+  JAVA_VERSION: 25
+  JAVA_DISTRIBUTION: temurin
 
 jobs:
   deploy:
@@ -25,11 +29,11 @@ jobs:
           submodules: true  # Fetch Hugo themes (true OR recursive)
           fetch-depth: 0    # Fetch all history for .GitInfo and .Lastmod
 
-      - name: Set up JDK 21
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v5
         with:
-          java-version: '21'
-          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
           cache: gradle
 
       - name: Setup Gradle
