@@ -37,6 +37,8 @@ ksp {
 }
 ```
 
+Check out an [example project](https://github.com/Kotlin/kotlinx-schema/tree/main/examples/gradle-google-ksp).
+
 #### JVM-only projects
 
 ```kotlin
@@ -151,19 +153,22 @@ and include the annotations library in your project.
     </configuration>
 </plugin>
 
-    <!-- In <dependencies> -->
-<dependency>
-<groupId>org.jetbrains.kotlinx</groupId>
-<artifactId>kotlinx-schema-annotations-jvm</artifactId>
-<version>${kotlinx-schema.version}</version>
-</dependency>
-
+<!-- In <dependencies> -->
+<dependencies>
+    <dependency>
+        <groupId>org.jetbrains.kotlinx</groupId>
+        <artifactId>kotlinx-schema-annotations-jvm</artifactId>
+        <version>${kotlinx-schema.version}</version>
+    </dependency>
+</dependencies>
 
 <properties>
 <!-- check latest version: https://central.sonatype.com/artifact/org.jetbrains.kotlinx/kotlinx-schema-ksp -->
 <kotlinx-schema.version>0.0.5</kotlinx-schema.version>
 </properties>
 ```
+
+Check out an [example project](https://github.com/Kotlin/kotlinx-schema/tree/main/examples/maven-ksp).
 
 ## Configuration options
 
