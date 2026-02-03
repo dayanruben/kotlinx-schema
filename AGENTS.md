@@ -22,6 +22,8 @@ changes safe, comprehensible, and easy to maintain.
 6. Prefer clarity over micro-optimizations and cleverness.
 7. Ask when uncertain. If requirements are ambiguous, request clarification with a concise question.
 8. Write code with the quality of a Kotlin Champion.
+9. Prefer using MCP servers like `jetbrains` and `intellij-index` to work with code and running tests.
+   Don't use MCP to run terminal commands.
 
 ## Code Style
 
