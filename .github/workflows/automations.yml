@@ -14,13 +14,13 @@ permissions:
 
 jobs:
   close-question-prs:
-    name: Mark Question PRs as Stale
+    name: Mark/Close stale PRs and issues
     runs-on: ubuntu-latest
     steps:
     - uses: actions/stale@v10
       ## https://github.com/marketplace/actions/close-stale-issues
       with:
-        debug-only: true # dry run
+        debug-only: false # 'true' for dry run
         exempt-draft-pr: true # pull requests currently in draft will not be marked as stale
         exempt-issue-labels: 'awaiting-approval,work-in-progress'
         stale-pr-label: 'stale'
