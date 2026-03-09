@@ -16,6 +16,7 @@ class SealedHierarchyTest {
                 json = json,
                 config = JsonSchemaConfig.Strict,
             ).generateSchema(ExampleA::class)
+
         val actual = json.encodeToString(schema)
         actual shouldEqualJson
             $$"""
@@ -26,15 +27,15 @@ class SealedHierarchyTest {
                    "additionalProperties": false,
                    "oneOf": [
                      {
-                       "$ref": "#/$defs/ExampleA.ExampleB"
+                       "$ref": "#/$defs/kotlinx.schema.generator.json.ExampleA.ExampleB"
                      }
                    ],
                    "$defs": {
-                     "ExampleA.ExampleB": {
+                     "kotlinx.schema.generator.json.ExampleA.ExampleB": {
                        "type": "object",
                        "properties": {
                          "type": {
-                           "const": "ExampleA.ExampleB",
+                           "const": "kotlinx.schema.generator.json.ExampleA.ExampleB",
                            "type": "string"
                          },
                          "someProp": {

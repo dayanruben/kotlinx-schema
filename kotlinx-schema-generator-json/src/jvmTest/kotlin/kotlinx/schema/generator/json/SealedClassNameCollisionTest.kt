@@ -77,70 +77,104 @@ class SealedClassNameCollisionTest {
         json.encodeToString(schema) shouldEqualJson
             $$"""
             {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
-                "$id": "kotlinx.schema.generator.json.SealedClassNameCollisionTest.ApiResponse",
-                "type": "object",
-                "properties": {
-                  "resultA": {
-                    "oneOf": [
-                      { "$ref": "#/$defs/ResultA.Success" },
-                      { "$ref": "#/$defs/ResultA.Unknown" }
-                    ],
-                    "description": "Result type A"
-                  },
-                  "resultB": {
-                    "oneOf": [
-                      { "$ref": "#/$defs/ResultB.Success" },
-                      { "$ref": "#/$defs/ResultB.Unknown" }
-                    ],
-                    "description": "Result type B"
-                  }
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "$id": "kotlinx.schema.generator.json.SealedClassNameCollisionTest.ApiResponse",
+              "description": "Container with both result types",
+              "type": "object",
+              "properties": {
+                "resultA": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/$defs/kotlinx.schema.generator.json.SealedClassNameCollisionTest.ResultA.Success"
+                    },
+                    {
+                      "$ref": "#/$defs/kotlinx.schema.generator.json.SealedClassNameCollisionTest.ResultA.Unknown"
+                    }
+                  ],
+                  "description": "Result type A"
                 },
-                "required": ["resultA", "resultB"],
-                "additionalProperties": false,
-                "description": "Container with both result types",
-                "$defs": {
-                  "ResultA.Success": {
-                    "type": "object",
-                    "description": "Success result for A",
-                    "properties": {
-                      "type": { "type": "string", "const": "ResultA.Success" },
-                      "value": { "type": "string" }
+                "resultB": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/$defs/kotlinx.schema.generator.json.SealedClassNameCollisionTest.ResultB.Success"
                     },
-                    "required": ["type", "value"],
-                    "additionalProperties": false
-                  },
-                  "ResultA.Unknown": {
-                    "type": "object",
-                    "description": "Unknown error for A",
-                    "properties": {
-                      "type": { "type": "string", "const": "ResultA.Unknown" },
-                      "code": { "type": "integer" }
-                    },
-                    "required": ["type", "code"],
-                    "additionalProperties": false
-                  },
-                  "ResultB.Success": {
-                    "type": "object",
-                    "description": "Success result for B",
-                    "properties": {
-                      "type": { "type": "string", "const": "ResultB.Success" },
-                      "data": { "type": "integer" }
-                    },
-                    "required": ["type", "data"],
-                    "additionalProperties": false
-                  },
-                  "ResultB.Unknown": {
-                    "type": "object",
-                    "description": "Unknown error for B",
-                    "properties": {
-                      "type": { "type": "string", "const": "ResultB.Unknown" },
-                      "message": { "type": "string" }
-                    },
-                    "required": ["type", "message"],
-                    "additionalProperties": false
-                  }
+                    {
+                      "$ref": "#/$defs/kotlinx.schema.generator.json.SealedClassNameCollisionTest.ResultB.Unknown"
+                    }
+                  ],
+                  "description": "Result type B"
                 }
+              },
+              "additionalProperties": false,
+              "required": [
+                "resultA",
+                "resultB"
+              ],
+              "$defs": {
+                "kotlinx.schema.generator.json.SealedClassNameCollisionTest.ResultA.Success": {
+                  "type": "object",
+                  "description": "Success result for A",
+                  "properties": {
+                    "type": { 
+                      "type": "string", 
+                       "const": "kotlinx.schema.generator.json.SealedClassNameCollisionTest.ResultA.Success"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                },
+                "kotlinx.schema.generator.json.SealedClassNameCollisionTest.ResultA.Unknown": {
+                  "type": "object",
+                  "description": "Unknown error for A",
+                  "properties": {
+                    "type": { "type": "string", "const": "kotlinx.schema.generator.json.SealedClassNameCollisionTest.ResultA.Unknown" },
+                    "code": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "code"
+                  ],
+                  "additionalProperties": false
+                },
+                "kotlinx.schema.generator.json.SealedClassNameCollisionTest.ResultB.Success": {
+                  "type": "object",
+                  "description": "Success result for B",
+                  "properties": {
+                    "type": { "type": "string", "const": "kotlinx.schema.generator.json.SealedClassNameCollisionTest.ResultB.Success" },
+                    "data": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                },
+                "kotlinx.schema.generator.json.SealedClassNameCollisionTest.ResultB.Unknown": {
+                  "type": "object",
+                  "description": "Unknown error for B",
+                  "properties": {
+                    "type": { "type": "string", "const": "kotlinx.schema.generator.json.SealedClassNameCollisionTest.ResultB.Unknown" },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              }
             }
             """.trimIndent()
     }

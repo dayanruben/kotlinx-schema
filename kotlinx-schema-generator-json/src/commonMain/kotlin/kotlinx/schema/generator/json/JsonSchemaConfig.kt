@@ -1,6 +1,5 @@
 package kotlinx.schema.generator.json
 
-import kotlinx.schema.generator.json.JsonSchemaConfig.Companion.Default
 import kotlinx.schema.generator.json.JsonSchemaConfig.Companion.Strict
 
 /**
@@ -15,8 +14,9 @@ import kotlinx.schema.generator.json.JsonSchemaConfig.Companion.Strict
  *
  * | respectDefaultPresence | requireNullableFields | Behavior |
  * |------------------------|-----------------------|----------|
- * | true | ignored | Use introspector's DefaultPresence (fields with defaults are optional) |
- * | false | true | All fields required (including nullables) - strict mode |
+ * | true  | false | Fields without defaults required; nullable fields with defaults optional |
+ * | true  | true  | Fields without defaults required; nullable fields always required |
+ * | false | true  | All fields required (including nullables) |
  * | false | false | Only non-nullable fields required |
  *
  * ### Nullable Type Representation
@@ -27,11 +27,6 @@ import kotlinx.schema.generator.json.JsonSchemaConfig.Companion.Strict
  * | false | true | `{"type": "string", "nullable": true}` (legacy OpenAPI) |
  * | false | false | `{"type": "string"}` (no nullable indication) |
  *
- * @property respectDefaultPresence Whether to use introspector's DefaultPresence for determining required fields
- * @property requireNullableFields Whether nullable fields must be present in JSON (when not using default presence)
- * @property useUnionTypes Whether to use union types for nullable fields (JSON Schema Draft 2020-12)
- * @property useNullableField Whether to emit the nullable field for nullable types (legacy OpenAPI)
- *
  * @see [JSON Schema Draft 2020-12](https://json-schema.org/draft/2020-12/json-schema-core.html)
  * @author Konstantin Pavlov
  */
@@ -39,26 +34,29 @@ public open class JsonSchemaConfig(
     /**
      * Whether to use hasDefaultValue from introspector to determine required fields.
      *
-     * When `true`: Uses `hasDefaultValue` from introspector. Fields without defaults
-     * are marked as required, fields with defaults are optional.
+     * When `true`: Fields without defaults are required; fields with defaults are optional.
+     * If [requireNullableFields] is also `true`, nullable fields are additionally required
+     * even when they carry a default value.
      *
      * When `false`: Uses [requireNullableFields] to determine required field behavior.
      *
-     * **Note**: This doesn't work reliably with KSP because KSP cannot detect default values
+     * **Note**: Does not work reliably with KSP because KSP cannot detect default values
      * in the same compilation unit. Works best with reflection-based introspection.
      *
-     * Default: `false`
+     * Default: `true`
      */
-    public val respectDefaultPresence: Boolean = false,
+    public val respectDefaultPresence: Boolean = true,
     /**
      * Whether nullable fields must be present in JSON.
      *
-     * Only applies when [respectDefaultPresence] is `false`.
+     * When [respectDefaultPresence] is `true`: additionally requires nullable fields
+     * even when they have a default value (e.g. `val x: String? = null`).
      *
-     * When `true`: Nullable fields ARE in the required array (must be present, can be null).
-     * When `false`: Nullable fields are NOT in the required array (can be omitted).
+     * When [respectDefaultPresence] is `false`:
+     * - `true`: All fields are required (must be present, can be null).
+     * - `false`: Only non-nullable fields are required.
      *
-     * Example with `requireNullableFields = true` (strict mode):
+     * Example with `requireNullableFields = true`:
      * ```kotlin
      * fun writeLog(level: String, exception: String? = null)
      * ```
@@ -73,20 +71,9 @@ public open class JsonSchemaConfig(
      * }
      * ```
      *
-     * Example with `requireNullableFields = false`:
-     * ```json
-     * {
-     *   "required": ["level"],
-     *   "properties": {
-     *     "level": { "type": "string" },
-     *     "exception": { "type": ["string", "null"] }
-     *   }
-     * }
-     * ```
-     *
-     * Default: `true` (Draft 2020-12 strict mode)
+     * Default: `false`
      */
-    public val requireNullableFields: Boolean = true,
+    public val requireNullableFields: Boolean = false,
     /**
      * Whether to use union types for nullable fields.
      *
@@ -108,16 +95,26 @@ public open class JsonSchemaConfig(
      */
     public val useNullableField: Boolean = false,
     /**
+     * Whether to include a type discriminator field in polymorphic schemas.
+     *
+     * When enabled, each polymorphic subtype schema gets an additional `"type"` property
+     * containing a constant string equal to the subtype's simple class name.
+     *
+     * It's a good practice to enable it by default
+     **/
+    public val includePolymorphicDiscriminator: Boolean = true,
+    /**
      * Whether to include discriminator in polymorphic schemas.
      *
      * When `true`: Includes discriminator object in oneOf schemas (OpenAPI 3.x compatibility).
      * When `false`: Omits discriminator (standard JSON Schema Draft 2020-12).
      *
      * Note: Discriminator is an OpenAPI extension, not part of JSON Schema specification.
+     * Note: to enable this option, [includePolymorphicDiscriminator] must also be `true`.
      *
      * Default: `false`
      */
-    public val includeDiscriminator: Boolean = false,
+    public val includeOpenAPIPolymorphicDiscriminator: Boolean = false,
 ) {
     init {
         // Validate flag combinations
@@ -128,6 +125,10 @@ public open class JsonSchemaConfig(
 
         require(useUnionTypes || useNullableField) {
             "Either useUnionTypes or useNullableField must be enabled..."
+        }
+
+        require(!includeOpenAPIPolymorphicDiscriminator || includePolymorphicDiscriminator) {
+            "includeOpenAPIPolymorphicDiscriminator requires includePolymorphicDiscriminator to be enabled"
         }
     }
 
@@ -143,39 +144,17 @@ public open class JsonSchemaConfig(
          * With KSP, behaves like [Strict] (all fields required).
          */
         public val Default: JsonSchemaConfig =
-            JsonSchemaConfig(
-                respectDefaultPresence = true,
-                requireNullableFields = true,
-                useUnionTypes = true,
-                useNullableField = false,
-                includeDiscriminator = false,
-            )
+            JsonSchemaConfig()
 
         /**
-         * Simplified configuration using default presence detection.
+         * Configuration where all fields are required regardless of Kotlin default values.
          *
-         * - Required fields based on default values (uses introspector's DefaultPresence)
-         * - Uses union types for nullable fields
+         *  - `requireNullableFields = true` — all fields in required array (including nullables)
+         *  - `useUnionTypes = true` — union types for nullable fields: `["string", "null"]`
+         *  - Type discriminators are enabled for polymorphic types
          *
-         * **Note**: Identical to [Default]. Kept for backward compatibility.
-         */
-        public val Simple: JsonSchemaConfig =
-            JsonSchemaConfig(
-                respectDefaultPresence = true,
-                requireNullableFields = true,
-                useUnionTypes = true,
-                useNullableField = false,
-                includeDiscriminator = false,
-            )
-
-        /**
-         * Configuration for full JSON Schema Draft 2020-12 compliance:
-         *  - `respectDefaultPresence = false` - ignore default values (KSP limitation)
-         *  - `requireNullableFields = true` - all fields in required array (including nullables)
-         *  - `useUnionTypes = true` - union types for nullable fields
-         *
-         * Use this when generating schemas that must strictly comply with JSON Schema Draft 2020-12,
-         * or when using with OpenAI function calling APIs with strict mode enabled.
+         * Use this when generating schemas for OpenAI function calling APIs with strict mode enabled,
+         * or any other schema consumer that requires all properties to be present in the JSON object.
          *
          * See [JSON Schema Draft 2020-12](https://json-schema.org/draft/2020-12/json-schema-core.html)
          */
@@ -185,7 +164,8 @@ public open class JsonSchemaConfig(
                 requireNullableFields = true,
                 useUnionTypes = true,
                 useNullableField = false,
-                includeDiscriminator = false,
+                includePolymorphicDiscriminator = true,
+                includeOpenAPIPolymorphicDiscriminator = false,
             )
 
         /**
@@ -207,7 +187,8 @@ public open class JsonSchemaConfig(
                 requireNullableFields = false,
                 useUnionTypes = false,
                 useNullableField = true,
-                includeDiscriminator = true,
+                includePolymorphicDiscriminator = true,
+                includeOpenAPIPolymorphicDiscriminator = true,
             )
     }
 }

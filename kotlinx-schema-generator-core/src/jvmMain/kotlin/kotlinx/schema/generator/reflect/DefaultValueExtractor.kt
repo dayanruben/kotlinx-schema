@@ -1,10 +1,10 @@
 package kotlinx.schema.generator.reflect
 
+import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 import kotlin.reflect.KParameter
 import kotlin.reflect.KProperty1
-import kotlin.reflect.full.primaryConstructor
 
 /**
  * Extracts default values from data class properties using reflection.
@@ -17,7 +17,7 @@ internal object DefaultValueExtractor {
     private val cache = ConcurrentHashMap<KClass<*>, Map<String, Any?>>()
 
     /**
-     * Extracts default values for the given [klass].
+     * Extracts default values for the given [KClass].
      * Results are cached for performance.
      */
     fun extractDefaultValues(klass: KClass<*>): Map<String, Any?> =
@@ -25,23 +25,25 @@ internal object DefaultValueExtractor {
             doExtractDefaultValues(klass)
         }
 
-    @Suppress("CyclomaticComplexMethod", "ThrowsCount", "LongMethod", "ReturnCount")
+    private fun KClass<*>.extractInstanceProperties(instance: Any): Map<String, Any?> =
+        this.members
+            .filterIsInstance<KProperty1<Any, *>>()
+            .associate { prop ->
+                prop.name to
+                    try {
+                        prop.get(instance)
+                    } catch (e: InvocationTargetException) {
+                        throw e.cause ?: e
+                    }
+            }.filterValues { it != null }
+
+    @Suppress("CyclomaticComplexMethod", "ReturnCount")
     private fun doExtractDefaultValues(klass: KClass<*>): Map<String, Any?> {
         // For object instances (singletons), get the instance directly
-        klass.objectInstance?.let { instance ->
-            return klass.members
-                .filterIsInstance<KProperty1<Any, *>>()
-                .associate { prop ->
-                    prop.name to
-                        try {
-                            prop.get(instance)
-                        } catch (e: java.lang.reflect.InvocationTargetException) {
-                            throw e.cause ?: e
-                        }
-                }.filterValues { it != null }
-        }
+        klass.objectInstance?.let { return klass.extractInstanceProperties(it) }
 
-        val constructor = klass.primaryConstructor ?: return emptyMap()
+        val constructor = findPrimaryConstructor(klass) ?: return emptyMap()
+
         val requiredParams = constructor.parameters.filter { !it.isOptional }
 
         // Build map of required parameters with mock values
@@ -80,29 +82,20 @@ internal object DefaultValueExtractor {
                         )
                     -> emptyMap<Any, Any>()
 
-                    else -> return emptyMap() // Can't provide mock value for unknown non-nullable type
+                    else -> return emptyMap() // Can't provide mock value for an unknown non-nullable type
                 }
             paramMap[param] = mockValue
         }
 
-        // Create instance with only required parameters to get defaults
+        // Create an instance with only required parameters to get defaults
         val instance =
             try {
                 constructor.callBy(paramMap)
-            } catch (e: java.lang.reflect.InvocationTargetException) {
+            } catch (e: InvocationTargetException) {
                 throw e.cause ?: e
             }
 
         // Extract property values from the instance
-        return klass.members
-            .filterIsInstance<KProperty1<Any, *>>()
-            .associate { prop ->
-                prop.name to
-                    try {
-                        prop.get(instance)
-                    } catch (e: java.lang.reflect.InvocationTargetException) {
-                        throw e.cause ?: e
-                    }
-            }.filterValues { it != null }
+        return klass.extractInstanceProperties(instance)
     }
 }
