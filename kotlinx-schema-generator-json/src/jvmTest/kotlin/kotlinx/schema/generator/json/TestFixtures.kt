@@ -68,6 +68,28 @@ data class WithNumericTypes(
     val nullableDouble: Double? = null,
 )
 
+@Description("Class with unsigned numeric types")
+data class WithUnsignedTypes(
+    @property:Description("UByte value")
+    val uByteVal: UByte,
+    @property:Description("UShort value")
+    val uShortVal: UShort,
+    @property:Description("UInt value")
+    val uIntVal: UInt,
+    @property:Description("ULong value")
+    val uLongVal: ULong,
+    @property:Description("Nullable UInt")
+    val nullableUInt: UInt? = null,
+)
+
+@Description("Class with unsigned defaults")
+data class WithUnsignedDefaults(
+    @property:Description("Port with default")
+    val port: UInt = 8080u,
+    @property:Description("Capacity with default")
+    val capacity: ULong = ULong.MAX_VALUE,
+)
+
 // Class with collections
 @Description("Class with collections")
 data class WithCollections(

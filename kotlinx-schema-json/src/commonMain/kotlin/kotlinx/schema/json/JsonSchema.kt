@@ -20,6 +20,7 @@ import kotlinx.schema.json.JsonSchemaConstants.Types.BOOLEAN_TYPE
 import kotlinx.schema.json.JsonSchemaConstants.Types.OBJECT_TYPE
 import kotlinx.schema.json.JsonSchemaConstants.Types.STRING_TYPE
 import kotlinx.schema.json.serializers.AdditionalPropertiesSerializer
+import kotlinx.schema.json.serializers.IntegralDoubleSerializer
 import kotlinx.schema.json.serializers.ArrayEnumSerializer
 import kotlinx.schema.json.serializers.BooleanEnumSerializer
 import kotlinx.schema.json.serializers.NumberToNullableIntSerializer
@@ -469,6 +470,7 @@ public data class JsonSchema(
     public override val contentEncoding: String? = null,
     public override val contentMediaType: String? = null,
     public override val contentSchema: PropertyDefinition? = null,
+    @Serializable(with = IntegralDoubleSerializer::class)
     public override val minimum: Double? = null,
     public override val maximum: Double? = null,
     public override val exclusiveMinimum: Double? = null,
@@ -662,6 +664,7 @@ public data class NumericPropertyDefinition(
     @Serializable(with = NumericEnumSerializer::class)
     val enum: List<Double>? = null,
     override val multipleOf: Double? = null,
+    @Serializable(with = IntegralDoubleSerializer::class)
     override val minimum: Double? = null,
     override val exclusiveMinimum: Double? = null,
     override val maximum: Double? = null,

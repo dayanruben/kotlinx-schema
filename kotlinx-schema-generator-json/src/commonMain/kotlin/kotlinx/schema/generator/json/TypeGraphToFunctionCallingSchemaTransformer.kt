@@ -275,11 +275,14 @@ public class TypeGraphToFunctionCallingSchemaTransformer
                     )
                 }
 
-                PrimitiveKind.INT, PrimitiveKind.LONG -> {
+                PrimitiveKind.INT,
+                PrimitiveKind.LONG,
+                -> {
                     NumericPropertyDefinition(
                         type = if (nullable) INTEGER_OR_NULL_TYPE else INTEGER_TYPE,
                         description = node.description,
                         nullable = null,
+                        minimum = if (node.unsigned) 0.0 else null,
                     )
                 }
 

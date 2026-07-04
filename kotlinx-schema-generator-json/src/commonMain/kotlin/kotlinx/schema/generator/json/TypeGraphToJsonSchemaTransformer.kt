@@ -198,6 +198,7 @@ public class TypeGraphToJsonSchemaTransformer
                 id = formatSchemaId(rootName),
                 type = rootDefinition.type,
                 description = rootDefinition.description,
+                minimum = rootDefinition.minimum,
                 properties = emptyMap(),
                 required = emptyList(),
                 additionalProperties = null,
@@ -408,11 +409,14 @@ public class TypeGraphToJsonSchemaTransformer
                     )
                 }
 
-                PrimitiveKind.INT, PrimitiveKind.LONG -> {
+                PrimitiveKind.INT,
+                PrimitiveKind.LONG,
+                -> {
                     NumericPropertyDefinition(
                         type = if (nullable && config.useUnionTypes) INTEGER_OR_NULL_TYPE else INTEGER_TYPE,
                         description = node.description,
                         nullable = getNullableFlag(nullable),
+                        minimum = if (node.unsigned) 0.0 else null,
                     )
                 }
 

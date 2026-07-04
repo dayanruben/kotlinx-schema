@@ -15,6 +15,7 @@ import kotlinx.schema.json.OneOfPropertyDefinition
 import kotlinx.schema.json.PropertyDefinition
 import kotlinx.schema.json.ReferencePropertyDefinition
 import kotlinx.schema.json.StringPropertyDefinition
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -97,6 +98,7 @@ internal fun removeNullableFlag(propertyDef: PropertyDefinition): PropertyDefini
 /**
  * Converts a Kotlin value to a JsonElement.
  */
+@OptIn(ExperimentalSerializationApi::class)
 private fun toJsonElement(value: Any?): JsonElement? =
     when (value) {
         null -> {
@@ -108,6 +110,22 @@ private fun toJsonElement(value: Any?): JsonElement? =
         }
 
         is Number -> {
+            JsonPrimitive(value)
+        }
+
+        is UByte -> {
+            JsonPrimitive(value)
+        }
+
+        is UShort -> {
+            JsonPrimitive(value)
+        }
+
+        is UInt -> {
+            JsonPrimitive(value)
+        }
+
+        is ULong -> {
             JsonPrimitive(value)
         }
 

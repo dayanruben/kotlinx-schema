@@ -32,7 +32,9 @@ internal object KspTypeMappers {
             "kotlin.String" -> PrimitiveNode(PrimitiveKind.STRING)
             "kotlin.Boolean" -> PrimitiveNode(PrimitiveKind.BOOLEAN)
             "kotlin.Int", "kotlin.Byte", "kotlin.Short" -> PrimitiveNode(PrimitiveKind.INT)
+            "kotlin.UByte", "kotlin.UShort", "kotlin.UInt" -> PrimitiveNode(PrimitiveKind.INT, unsigned = true)
             "kotlin.Long" -> PrimitiveNode(PrimitiveKind.LONG)
+            "kotlin.ULong" -> PrimitiveNode(PrimitiveKind.LONG, unsigned = true)
             "kotlin.Float" -> PrimitiveNode(PrimitiveKind.FLOAT)
             "kotlin.Double" -> PrimitiveNode(PrimitiveKind.DOUBLE)
             else -> null
@@ -69,7 +71,11 @@ internal object KspTypeMappers {
             "kotlin.ByteArray",
             "kotlin.ShortArray",
             "kotlin.IntArray",
+            "kotlin.UByteArray",
+            "kotlin.UShortArray",
+            "kotlin.UIntArray",
             "kotlin.LongArray",
+            "kotlin.ULongArray",
             "kotlin.FloatArray",
             "kotlin.DoubleArray",
             "kotlin.CharArray",
@@ -98,20 +104,23 @@ internal object KspTypeMappers {
         recursiveMapper: (KSType) -> TypeRef,
     ): TypeRef {
         val qn = type.declaration.qualifiedName?.asString()
-        val primitiveElemKind =
+        val primitiveElemNode =
             when (qn) {
-                "kotlin.BooleanArray" -> PrimitiveKind.BOOLEAN
-                "kotlin.ByteArray", "kotlin.ShortArray", "kotlin.IntArray" -> PrimitiveKind.INT
-                "kotlin.LongArray" -> PrimitiveKind.LONG
-                "kotlin.FloatArray" -> PrimitiveKind.FLOAT
-                "kotlin.DoubleArray" -> PrimitiveKind.DOUBLE
-                "kotlin.CharArray" -> PrimitiveKind.STRING
+                "kotlin.BooleanArray" -> PrimitiveNode(PrimitiveKind.BOOLEAN)
+                "kotlin.ByteArray", "kotlin.ShortArray", "kotlin.IntArray" -> PrimitiveNode(PrimitiveKind.INT)
+                "kotlin.UByteArray", "kotlin.UShortArray", "kotlin.UIntArray" ->
+                    PrimitiveNode(PrimitiveKind.INT, unsigned = true)
+                "kotlin.LongArray" -> PrimitiveNode(PrimitiveKind.LONG)
+                "kotlin.ULongArray" -> PrimitiveNode(PrimitiveKind.LONG, unsigned = true)
+                "kotlin.FloatArray" -> PrimitiveNode(PrimitiveKind.FLOAT)
+                "kotlin.DoubleArray" -> PrimitiveNode(PrimitiveKind.DOUBLE)
+                "kotlin.CharArray" -> PrimitiveNode(PrimitiveKind.STRING)
                 else -> null
             }
 
         val elementRef =
-            if (primitiveElemKind != null) {
-                TypeRef.Inline(PrimitiveNode(primitiveElemKind))
+            if (primitiveElemNode != null) {
+                TypeRef.Inline(primitiveElemNode)
             } else {
                 val elem =
                     type.arguments

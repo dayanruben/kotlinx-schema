@@ -3,6 +3,7 @@ package kotlinx.schema.generator.json.serialization
 import io.kotest.assertions.json.shouldEqualJson
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.serializer
 import kotlin.test.Test
 
 class SerializationClassJsonSchemaGeneratorTest {
@@ -13,6 +14,20 @@ class SerializationClassJsonSchemaGeneratorTest {
         val foo: String,
         @property:CustomDescription("Nested bar property")
         val bar: Int,
+    )
+
+    @Serializable
+    data class UnsignedPropertyHolder(
+        @property:CustomDescription("Unsigned byte property")
+        val uByteProperty: UByte,
+        @property:CustomDescription("Unsigned short property")
+        val uShortProperty: UShort,
+        @property:CustomDescription("Unsigned int property")
+        val uIntProperty: UInt,
+        @property:CustomDescription("Unsigned long property")
+        val uLongProperty: ULong,
+        @property:CustomDescription("Nullable unsigned int property")
+        val nullableUIntProperty: UInt? = null,
     )
 
     @Serializable
@@ -360,6 +375,74 @@ class SerializationClassJsonSchemaGeneratorTest {
                 "distance"
               ],
               "additionalProperties": false
+            }
+            """.trimIndent()
+    }
+
+    @Test
+    fun `Should keep minimum for root-level unsigned primitive`() {
+        val schema = generator.generateSchemaString(UInt.serializer().descriptor)
+
+        schema shouldEqualJson
+            // language=JSON
+            $$"""
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "$id": "kotlin.UInt",
+              "type": "integer",
+              "minimum": 0
+            }
+            """.trimIndent()
+    }
+
+    @Test
+    fun `Should generate JsonSchema for unsigned numeric properties`() {
+        val schema = generator.generateSchemaString(UnsignedPropertyHolder.serializer().descriptor)
+
+        schema shouldEqualJson
+            // language=JSON
+            $$"""
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "$id": "kotlinx.schema.generator.json.serialization.SerializationClassJsonSchemaGeneratorTest.UnsignedPropertyHolder",
+              "type": "object",
+              "properties": {
+                "uByteProperty": {
+                  "type": "integer",
+                  "description": "Unsigned byte property",
+                  "minimum": 0
+                },
+                "uShortProperty": {
+                  "type": "integer",
+                  "description": "Unsigned short property",
+                  "minimum": 0
+                },
+                "uIntProperty": {
+                  "type": "integer",
+                  "description": "Unsigned int property",
+                  "minimum": 0
+                },
+                "uLongProperty": {
+                  "type": "integer",
+                  "description": "Unsigned long property",
+                  "minimum": 0
+                },
+                "nullableUIntProperty": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "description": "Nullable unsigned int property",
+                  "minimum": 0
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "uByteProperty",
+                "uShortProperty",
+                "uIntProperty",
+                "uLongProperty"
+              ]
             }
             """.trimIndent()
     }
