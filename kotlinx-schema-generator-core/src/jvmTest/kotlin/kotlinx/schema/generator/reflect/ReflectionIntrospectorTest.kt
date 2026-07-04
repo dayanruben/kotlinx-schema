@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package kotlinx.schema.generator.reflect
 
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
@@ -16,7 +18,12 @@ import kotlinx.schema.generator.core.ir.PrimitiveKind
 import kotlinx.schema.generator.core.ir.PrimitiveNode
 import kotlinx.schema.generator.core.ir.TypeId
 import kotlinx.schema.generator.core.ir.TypeRef
+import kotlinx.serialization.Serializable
+import kotlin.jvm.JvmInline
 import kotlin.test.Test
+import kotlin.time.Duration
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 class ReflectionIntrospectorTest {
     @Description("A user model")
@@ -332,5 +339,278 @@ class ReflectionIntrospectorTest {
 
         // kotlin.Any does not create a named node in the graph
         graph.nodes.keys.none { it.value == "kotlin.Any" } shouldBe true
+    }
+
+    // ---- Inline value classes & serializer-aware primitive resolution -----------------
+
+    @JvmInline
+    @Serializable
+    value class Meters(val value: Double)
+
+    data class WithInlineValueClass(
+        val distance: Meters,
+        val optionalDistance: Meters?,
+    )
+
+    @Test
+    fun `introspects inline value class as its inner primitive type`() {
+        val graph = introspector.introspect(WithInlineValueClass::class)
+
+        val rootRef = graph.root.shouldBeInstanceOf<TypeRef.Ref>()
+        val objNode = graph.nodes[rootRef.id].shouldNotBeNull().shouldBeInstanceOf<ObjectNode>()
+        val props = objNode.properties.associateBy { it.name }
+
+        // Non-nullable inline value class wrapping a Double should resolve to a flat
+        // double primitive — no `{value: …}` wrapper, no `Meters` node in the graph.
+        props.getValue("distance").type.shouldBeInstanceOf<TypeRef.Inline> { inline ->
+            inline.node.shouldBeInstanceOf<PrimitiveNode> { prim ->
+                prim.kind shouldBe PrimitiveKind.DOUBLE
+            }
+            inline.nullable shouldBe false
+        }
+
+        // Nullable variant should propagate the nullability through the flattening.
+        props.getValue("optionalDistance").type.shouldBeInstanceOf<TypeRef.Inline> { inline ->
+            inline.node.shouldBeInstanceOf<PrimitiveNode> { prim ->
+                prim.kind shouldBe PrimitiveKind.DOUBLE
+            }
+            inline.nullable shouldBe true
+        }
+
+        // The inline class itself must NOT appear as a separate node in the graph.
+        graph.nodes.keys.none { it.value.endsWith("Meters") } shouldBe true
+    }
+
+    @JvmInline
+    @Serializable
+    value class TestUserId(val value: Uuid)
+
+    data class WithInlineValueClassWrappingUuid(
+        val id: TestUserId,
+        val optionalId: TestUserId?,
+    )
+
+    @Test
+    fun `inline value class wrapping Uuid resolves to STRING`() {
+        // Repro for the bug observed downstream when Koog generated a tool descriptor for a
+        // method taking a typed-id parameter (an `@JvmInline value class` wrapping a `Uuid`).
+        // Without the inline-class flattening + serializer-aware primitive resolution, the
+        // reflection introspector would produce an ObjectNode like
+        // `{value: {leastSignificantBits, mostSignificantBits}}` by walking Uuid's structure.
+        //
+        // Resolution goes through the built-in Uuid serializer (PrimitiveKind.STRING); a
+        // use-site `@Serializable(with = …)` on the inner type is NOT consulted by the
+        // reflective serializerOrNull lookup (see serializerPrimitiveFor).
+        val graph = introspector.introspect(WithInlineValueClassWrappingUuid::class)
+
+        val rootRef = graph.root.shouldBeInstanceOf<TypeRef.Ref>()
+        val objNode = graph.nodes[rootRef.id].shouldNotBeNull().shouldBeInstanceOf<ObjectNode>()
+        val props = objNode.properties.associateBy { it.name }
+
+        props.getValue("id").type.shouldBeInstanceOf<TypeRef.Inline> { inline ->
+            inline.node.shouldBeInstanceOf<PrimitiveNode> { prim ->
+                prim.kind shouldBe PrimitiveKind.STRING
+            }
+            inline.nullable shouldBe false
+        }
+
+        props.getValue("optionalId").type.shouldBeInstanceOf<TypeRef.Inline> { inline ->
+            inline.node.shouldBeInstanceOf<PrimitiveNode> { prim ->
+                prim.kind shouldBe PrimitiveKind.STRING
+            }
+            inline.nullable shouldBe true
+        }
+
+        // Neither the inline class nor the underlying Uuid should appear as named nodes.
+        graph.nodes.keys.none { it.value.endsWith("TestUserId") } shouldBe true
+        graph.nodes.keys.none { it.value == "kotlin.uuid.Uuid" } shouldBe true
+    }
+
+    data class WithBuiltinUuid(
+        val id: Uuid,
+        val optionalId: Uuid?,
+    )
+
+    @Test
+    fun `bare kotlin uuid Uuid resolves to STRING via built-in serializer`() {
+        // kotlinx-serialization 1.10+ ships a built-in Uuid serializer that's
+        // PrimitiveKind.STRING. The reflection introspector should pick it up via
+        // `serializerOrNull(typeOf<Uuid>())` without needing any user annotation.
+        val graph = introspector.introspect(WithBuiltinUuid::class)
+
+        val rootRef = graph.root.shouldBeInstanceOf<TypeRef.Ref>()
+        val objNode = graph.nodes[rootRef.id].shouldNotBeNull().shouldBeInstanceOf<ObjectNode>()
+        val props = objNode.properties.associateBy { it.name }
+
+        props.getValue("id").type.shouldBeInstanceOf<TypeRef.Inline> { inline ->
+            inline.node.shouldBeInstanceOf<PrimitiveNode> { prim -> prim.kind shouldBe PrimitiveKind.STRING }
+            inline.nullable shouldBe false
+        }
+        props.getValue("optionalId").type.shouldBeInstanceOf<TypeRef.Inline> { inline ->
+            inline.node.shouldBeInstanceOf<PrimitiveNode> { prim -> prim.kind shouldBe PrimitiveKind.STRING }
+            inline.nullable shouldBe true
+        }
+
+        graph.nodes.keys.none { it.value == "kotlin.uuid.Uuid" } shouldBe true
+    }
+
+    // ---- Class-level @Description on an inline value class -----------------------------
+
+    @Description("Distance in meters")
+    @JvmInline
+    value class DescribedMeters(val value: Double)
+
+    data class WithDescribedInlineValueClass(val distance: DescribedMeters)
+
+    @Test
+    fun `propagates class-level description of an inline value class onto the flattened primitive`() {
+        val graph = introspector.introspect(WithDescribedInlineValueClass::class)
+
+        val rootRef = graph.root.shouldBeInstanceOf<TypeRef.Ref>()
+        val objNode = graph.nodes[rootRef.id].shouldNotBeNull().shouldBeInstanceOf<ObjectNode>()
+        val props = objNode.properties.associateBy { it.name }
+
+        props.getValue("distance").type.shouldBeInstanceOf<TypeRef.Inline> { inline ->
+            inline.node.shouldBeInstanceOf<PrimitiveNode> { prim ->
+                prim.kind shouldBe PrimitiveKind.DOUBLE
+                prim.description shouldBe "Distance in meters"
+            }
+        }
+    }
+
+    // ---- Non-@Serializable inline value class (plain wrapper) --------------------------
+
+    @JvmInline
+    value class PlainId(val value: Int)
+
+    data class WithPlainInlineValueClass(
+        val id: PlainId,
+        val optionalId: PlainId?,
+    )
+
+    @Test
+    fun `flattens a non-serializable inline value class to its inner primitive`() {
+        val graph = introspector.introspect(WithPlainInlineValueClass::class)
+
+        val rootRef = graph.root.shouldBeInstanceOf<TypeRef.Ref>()
+        val objNode = graph.nodes[rootRef.id].shouldNotBeNull().shouldBeInstanceOf<ObjectNode>()
+        val props = objNode.properties.associateBy { it.name }
+
+        props.getValue("id").type.shouldBeInstanceOf<TypeRef.Inline> { inline ->
+            inline.node.shouldBeInstanceOf<PrimitiveNode> { prim -> prim.kind shouldBe PrimitiveKind.INT }
+            inline.nullable shouldBe false
+        }
+        props.getValue("optionalId").type.shouldBeInstanceOf<TypeRef.Inline> { inline ->
+            inline.node.shouldBeInstanceOf<PrimitiveNode> { prim -> prim.kind shouldBe PrimitiveKind.INT }
+            inline.nullable shouldBe true
+        }
+        graph.nodes.keys.none { it.value.endsWith("PlainId") } shouldBe true
+    }
+
+    // ---- Inline value class wrapping non-primitive inner types -------------------------
+
+    @JvmInline
+    value class Tags(val values: List<String>)
+
+    data class NestedData(val label: String)
+
+    @JvmInline
+    value class WrappedData(val inner: NestedData)
+
+    data class WithNonPrimitiveInlineValueClasses(
+        val tags: Tags,
+        val optionalTags: Tags?,
+        val wrapped: WrappedData,
+    )
+
+    @Test
+    fun `flattens inline value class wrapping a list and an object`() {
+        val graph = introspector.introspect(WithNonPrimitiveInlineValueClasses::class)
+
+        val rootRef = graph.root.shouldBeInstanceOf<TypeRef.Ref>()
+        val objNode = graph.nodes[rootRef.id].shouldNotBeNull().shouldBeInstanceOf<ObjectNode>()
+        val props = objNode.properties.associateBy { it.name }
+
+        // value class wrapping List<String> flattens to a ListNode (no wrapper object).
+        props.getValue("tags").type.shouldBeInstanceOf<TypeRef.Inline> { inline ->
+            inline.node.shouldBeInstanceOf<ListNode> { listNode ->
+                listNode.element.shouldBeInstanceOf<TypeRef.Inline> { el ->
+                    el.node.shouldBeInstanceOf<PrimitiveNode> { prim -> prim.kind shouldBe PrimitiveKind.STRING }
+                }
+            }
+            inline.nullable shouldBe false
+        }
+
+        // Nullable variant propagates nullability onto the flattened list.
+        props.getValue("optionalTags").type.shouldBeInstanceOf<TypeRef.Inline> { inline ->
+            inline.node.shouldBeInstanceOf<ListNode>()
+            inline.nullable shouldBe true
+        }
+
+        // value class wrapping a data class flattens to a $ref to that class.
+        props.getValue("wrapped").type.shouldBeInstanceOf<TypeRef.Ref>()
+        graph.nodes.keys.any { it.value.endsWith("NestedData") } shouldBe true
+        graph.nodes.keys.none { it.value.endsWith("WrappedData") } shouldBe true
+        graph.nodes.keys.none { it.value.endsWith("Tags") } shouldBe true
+    }
+
+    // ---- Serializer-described primitives beyond Uuid (behavior breadth) ----------------
+
+    data class WithDuration(val timeout: Duration)
+
+    @Test
+    fun `kotlin time Duration resolves to STRING via its built-in serializer`() {
+        // The serializer-aware resolution intentionally collapses ANY type whose default
+        // serializer is primitive-kind, not just Uuid: kotlin.time.Duration serializes as a
+        // string, so the reflection schema reflects that instead of walking it structurally.
+        val graph = introspector.introspect(WithDuration::class)
+
+        val rootRef = graph.root.shouldBeInstanceOf<TypeRef.Ref>()
+        val objNode = graph.nodes[rootRef.id].shouldNotBeNull().shouldBeInstanceOf<ObjectNode>()
+        val props = objNode.properties.associateBy { it.name }
+
+        props.getValue("timeout").type.shouldBeInstanceOf<TypeRef.Inline> { inline ->
+            inline.node.shouldBeInstanceOf<PrimitiveNode> { prim -> prim.kind shouldBe PrimitiveKind.STRING }
+        }
+    }
+
+    // ---- Star projections must not crash serializer resolution -------------------------
+
+    data class WithStarProjections(
+        val items: List<*>,
+        val mapping: Map<String, *>,
+    )
+
+    @Test
+    fun `star-projected generics fall through to structural handling without crashing`() {
+        // serializerOrNull(KType) THROWS for star projections; serializerPrimitiveFor must
+        // swallow that and let the structural handlers take over (regression guard).
+        val graph = introspector.introspect(WithStarProjections::class)
+
+        val rootRef = graph.root.shouldBeInstanceOf<TypeRef.Ref>()
+        val objNode = graph.nodes[rootRef.id].shouldNotBeNull().shouldBeInstanceOf<ObjectNode>()
+        val props = objNode.properties.associateBy { it.name }
+
+        props.getValue("items").type.shouldBeInstanceOf<TypeRef.Inline> { inline ->
+            inline.node.shouldBeInstanceOf<ListNode>()
+        }
+        props.getValue("mapping").type.shouldBeInstanceOf<TypeRef.Inline> { inline ->
+            inline.node.shouldBeInstanceOf<MapNode>()
+        }
+    }
+
+    // ---- Recursive inline value class must terminate -----------------------------------
+
+    @JvmInline
+    value class RecList(val inner: List<RecList>)
+
+    data class WithRecursiveInlineValueClass(val rec: RecList)
+
+    @Test
+    fun `recursive inline value class terminates instead of overflowing the stack`() {
+        // Flattening a value class that wraps a collection of itself would recurse forever;
+        // the cycle guard falls back to the structural object form so introspection completes.
+        val graph = introspector.introspect(WithRecursiveInlineValueClass::class)
+        graph.root.shouldBeInstanceOf<TypeRef.Ref>()
     }
 }

@@ -64,6 +64,13 @@ class SerializationIntrospectorTest {
     )
 
     @Serializable
+    data class WithSmallPrimitives(
+        val flag: Char,
+        val tiny: Byte,
+        val small: Short,
+    )
+
+    @Serializable
     sealed class Shape {
         @Serializable
         data class Circle(
@@ -234,6 +241,26 @@ class SerializationIntrospectorTest {
     }
 
     @Test
+    fun `introspects char byte and short primitives`() {
+        val graph = introspector.introspect(WithSmallPrimitives.serializer().descriptor)
+
+        val rootRef = graph.root.shouldBeInstanceOf<TypeRef.Ref>()
+        val node = graph.nodes[rootRef.id].shouldNotBeNull().shouldBeInstanceOf<ObjectNode>()
+        val properties = node.properties.associateBy { it.name }
+
+        // Char maps to STRING; Byte and Short map to INT.
+        properties.getValue("flag").type.shouldBeInstanceOf<TypeRef.Inline> { inline ->
+            inline.node.shouldBeInstanceOf<PrimitiveNode> { prim -> prim.kind shouldBe PrimitiveKind.STRING }
+        }
+        properties.getValue("tiny").type.shouldBeInstanceOf<TypeRef.Inline> { inline ->
+            inline.node.shouldBeInstanceOf<PrimitiveNode> { prim -> prim.kind shouldBe PrimitiveKind.INT }
+        }
+        properties.getValue("small").type.shouldBeInstanceOf<TypeRef.Inline> { inline ->
+            inline.node.shouldBeInstanceOf<PrimitiveNode> { prim -> prim.kind shouldBe PrimitiveKind.INT }
+        }
+    }
+
+    @Test
     fun `introspects sealed polymorphic adds polymorphic node and subtype objects`() {
         val graph = introspector.introspect(Shape.serializer().descriptor)
 
@@ -286,6 +313,42 @@ class SerializationIntrospectorTest {
             type.shouldBeInstanceOf<TypeRef.Inline> { inline ->
                 inline.node.shouldBeInstanceOf<PrimitiveNode> { prim ->
                     prim.kind shouldBe PrimitiveKind.DOUBLE
+                }
+                inline.nullable shouldBe true
+            }
+        }
+    }
+
+    @Test
+    fun `inline value class wrapping typealias-with-string-serializer resolves to STRING primitive`() {
+        // Repro for: downstream consumers (e.g. Koog tool descriptors) generate broken
+        // schemas with `leastSignificantBits` / `mostSignificantBits` integer fields when
+        // a tool parameter is typed as an inline value class wrapping a Uuid via a
+        // typealias annotated with `@Serializable(with = ...)`. Expected: the schema
+        // should reflect the *string* serializer attached via the typealias, not the
+        // structural object shape of `kotlin.uuid.Uuid`.
+        val graph =
+            introspector.introspect(
+                WithInlineValueClassWrappingUuid.serializer().descriptor,
+            )
+
+        val rootRef = graph.root.shouldBeInstanceOf<TypeRef.Ref>()
+        val objNode = graph.nodes[rootRef.id].shouldNotBeNull().shouldBeInstanceOf<ObjectNode>()
+        val props = objNode.properties.associateBy { it.name }
+
+        props.getValue("id") shouldNotBeNull {
+            type.shouldBeInstanceOf<TypeRef.Inline> { inline ->
+                inline.node.shouldBeInstanceOf<PrimitiveNode> { prim ->
+                    prim.kind shouldBe PrimitiveKind.STRING
+                }
+                inline.nullable shouldBe false
+            }
+        }
+
+        props.getValue("optionalId") shouldNotBeNull {
+            type.shouldBeInstanceOf<TypeRef.Inline> { inline ->
+                inline.node.shouldBeInstanceOf<PrimitiveNode> { prim ->
+                    prim.kind shouldBe PrimitiveKind.STRING
                 }
                 inline.nullable shouldBe true
             }
